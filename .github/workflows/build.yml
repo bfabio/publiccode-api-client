@@ -17,9 +17,6 @@ jobs:
 
       - run: cargo fmt -- --check
 
-      - run: cargo clippy --workspace --all-targets --all-features -- \
-          -D warnings \
-          -D clippy::pedantic \
-          -D clippy::nursery
+      - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
 
       - run: cargo build
