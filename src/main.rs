@@ -49,6 +49,25 @@ impl fmt::Display for Publisher {
     }
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Software {
+    id: String,
+    url: String,
+    publiccode_yml: String,
+    active: bool,
+}
+
+impl fmt::Display for Software {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}/publishers/{} ({}) active={} publiccodeYml={}",
+            API_BASE_URL, self.id, self.url, self.active, self.publiccode_yml,
+        )
+    }
+}
+
 const API_BASE_URL: &str = "https://api.developers.italia.it/v1";
 
 #[tokio::main]
@@ -92,7 +111,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::ListSoftware => {
             let items = get_paginated(&client, "software", &bearer).await?;
             for s in items {
-                println!("{s:#?}");
+                let s: Software = serde_json::from_value(s)?;
+                println!("{s}");
             }
         }
         Commands::ListPublishers { code_hostings } => {
@@ -119,7 +139,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 &bearer,
             )
             .await?;
-            println!("{}", serde_json::to_string_pretty(&res)?);
+
+            let s: Software = serde_json::from_value(res)?;
+            println!("{s}");
         }
         Commands::ShowPublisher { publisher_id } => {
             let res = api_request(
