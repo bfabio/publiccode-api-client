@@ -14,13 +14,30 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    CreatePublisher { data: String },
-    CreateSoftware { data: String },
-    UpdateSoftware { software_id: String, data: String },
-    ListSoftware,
-    ListPublishers { code_hostings: bool },
-    ShowSoftware { software_id: String },
-    ShowPublisher { publisher_id: String },
+    CreatePublisher {
+        data: String,
+    },
+    CreateSoftware {
+        data: String,
+    },
+    UpdateSoftware {
+        software_id: String,
+        data: String,
+    },
+    ListSoftware {
+        #[arg(long)]
+        long: bool,
+    },
+    ListPublishers {
+        #[arg(long)]
+        long: bool,
+    },
+    ShowSoftware {
+        software_id: String,
+    },
+    ShowPublisher {
+        publisher_id: String,
+    },
     Logs,
 }
 
@@ -54,16 +71,16 @@ impl fmt::Display for Publisher {
 struct Software {
     id: String,
     url: String,
-    publiccode_yml: String,
     active: bool,
+    updated_at: String,
 }
 
 impl fmt::Display for Software {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{}/publishers/{} ({}) active={} publiccodeYml={}",
-            API_BASE_URL, self.id, self.url, self.active, self.publiccode_yml,
+            "{}/publishers/{} ({}) active={} updatedAt={}",
+            API_BASE_URL, self.id, self.url, self.active, self.updated_at,
         )
     }
 }
@@ -108,22 +125,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .await?;
             println!("{res}");
         }
-        Commands::ListSoftware => {
+        Commands::ListSoftware { long } => {
             let items = get_paginated(&client, "software", &bearer).await?;
             for s in items {
-                let s: Software = serde_json::from_value(s)?;
-                println!("{s}");
+                if long {
+                    println!("{}", serde_json::to_string_pretty(&s)?);
+                } else {
+                    let s: Software = serde_json::from_value(s)?;
+                    println!("{s}");
+                }
             }
         }
-        Commands::ListPublishers { code_hostings } => {
+        Commands::ListPublishers { long } => {
             let items = get_paginated(&client, "publishers", &bearer).await?;
             for p in items {
-                if code_hostings {
-                    if let Some(code_hostings) = p.get("codeHosting") {
-                        for c in code_hostings.as_array().unwrap_or(&vec![]) {
-                            println!("{c:#?}");
-                        }
-                    }
+                if long {
+                    println!("{}", serde_json::to_string_pretty(&p)?);
                 } else {
                     let p: Publisher = serde_json::from_value(p)?;
                     println!("{p}");
@@ -140,8 +157,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             )
             .await?;
 
-            let s: Software = serde_json::from_value(res)?;
-            println!("{s}");
+            println!("{}", serde_json::to_string_pretty(&res)?);
         }
         Commands::ShowPublisher { publisher_id } => {
             let res = api_request(
